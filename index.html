@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SmartPera – Financial Health Check</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#e6f0ff">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <style>
+    :root{
+      --bg:#ffffff;
+      --section:#e6f0ff;
+      --ink:#0c1a33;
+      --muted:#435c7a;
+      --line:#cbd9ef;
+      --accent:#5091ff;
+      --good:#10b981;
+      --bad:#ef4444;
+      --warn:#f59e0b;
+      --card:#f7faff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+    header{position:sticky;top:0;background:#ffffffee;backdrop-filter:saturate(140%) blur(6px);border-bottom:1px solid var(--line);padding:12px 16px;z-index:5}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    h1{font-size:20px;margin:0}
+    .tag{display:inline-block;background:var(--section);border:1px solid var(--line);padding:6px 10px;border-radius:999px;color:#27466f;font-size:12px;margin-right:6px}
+    .grid{display:grid;gap:10px}
+    @media(min-width:900px){.grid{grid-template-columns:repeat(12,1fr)} .span-6{grid-column:span 6} .span-4{grid-column:span 4} .span-8{grid-column:span 8} .span-12{grid-column:span 12}}
+    fieldset{border:1px solid var(--line);background:var(--section);border-radius:14px;padding:14px}
+    legend{font-weight:700;color:#27466f;padding:0 6px}
+    label{display:block;font-size:13px;color:#27466f;margin-bottom:4px}
+    input, select, textarea, button{font:inherit}
+    input[type='text'],input[type='date'],input[type='number'],select,textarea{
+      width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:white;color:var(--ink);
+    }
+    textarea{resize:vertical}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .right{margin-left:auto}
+    .btn{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer}
+    .btn.secondary{background:#dfeaff;color:#27466f;border:1px solid var(--line)}
+    .btn.ghost{background:transparent;border:1px dashed var(--line);color:#27466f}
+    .section{background:var(--section);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+    .hr{height:1px;background:var(--line);margin:12px 0}
+    .note{font-size:12px;color:#27466f}
+    .kpi{display:inline-block;padding:8px 10px;border-radius:10px;background:var(--card);border:1px solid var(--line);margin:4px 6px 0 0}
+    .ok{color:var(--good)} .err{color:var(--bad)} .warn{color:var(--warn)}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{border:1px solid var(--line);padding:8px;text-align:right}
+    th:first-child,td:first-child{text-align:left}
+    .disclaimer{font-size:12px;color:#446084}
+    footer{margin:24px 0 40px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap row">
+      <h1>SmartPera – Financial Health Check</h1>
+      <span class="right tag" id="saveState">Not saved</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="row">
+      <span class="tag">Installable PWA</span>
+      <span class="tag">Works on GitHub Pages</span>
+      <span class="tag">Fast & mobile‑friendly</span>
+    </div>
+
+    <!-- Controls -->
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btnReport">Generate Report</button>
+      <button class="btn secondary" id="btnExport">Print / Save PDF</button>
+      <button class="btn ghost" id="btnSave">Save</button>
+      <button class="btn ghost" id="btnClear">Clear</button>
+      <span class="right note">Currency: 
+        <select id="currency"><option value="SGD">SGD</option><option value="PHP">PHP</option></select>
+      </span>
+    </div>
+
+    <!-- I. Important Information -->
+    <fieldset>
+      <legend>I. Important Information About You</legend>
+      <div class="grid">
+        <div class="span-6">
+          <label>Full Name *</label>
+          <input id="fullName" type="text" required placeholder="Juan Dela Cruz">
+        </div>
+        <div class="span-6">
+          <label>Date of Birth *</label>
+          <input id="dob" type="date" required>
+        </div>
+        <div class="span-4">
+          <label>Status *</label>
+          <select id="status">
+            <option>Single</option>
+            <option>Married</option>
+            <option>Widow</option>
+            <option>Separated</option>
+          </select>
+        </div>
+        <div class="span-4" id="spouseWrap" style="display:none">
+          <label>Is your spouse working?</label>
+          <select id="spouseWorking"><option value="yes">Yes</option><option value="no">No</option></select>
+        </div>
+        <div class="span-4" id="hasChildrenWrap" style="display:none">
+          <label>Do you have children?</label>
+          <select id="hasChildren"><option value="no">No</option><option value="yes">Yes</option></select>
+        </div>
+        <div class="span-4">
+          <label>Smoker</label>
+          <select id="smoker"><option>No</option><option>Yes</option></select>
+        </div>
+        <div class="span-8">
+          <label>Occupation</label>
+          <input id="occupation" type="text" placeholder="e.g., Financial Consultant">
+        </div>
+        <div class="span-12">
+          <label>Medical Conditions (if any)</label>
+          <textarea id="medical" rows="2" placeholder="List conditions or 'None'"></textarea>
+        </div>
+
+        <div class="span-4">
+          <label>Total Active Income (monthly) *</label>
+          <input class="money" id="incomeActive" type="text" placeholder="6,500">
+        </div>
+        <div class="span-4">
+          <label>Other Income (monthly) – optional</label>
+          <input class="money" id="incomeOther" type="text" placeholder="0">
+        </div>
+        <div class="span-4">
+          <label>Other Income Type</label>
+          <input id="incomeOtherType" type="text" placeholder="Business, rental, dividends, etc.">
+        </div>
+        <div class="span-4">
+          <label>Total Expenses (monthly) *</label>
+          <input class="money" id="expenses" type="text" placeholder="4,000">
+        </div>
+      </div>
+
+      <!-- Children List -->
+      <div id="childrenSection" class="section" style="display:none">
+        <div class="row">
+          <strong>Children</strong>
+          <button class="btn ghost" id="btnAddChild" type="button">+ Add Child</button>
+        </div>
+        <div id="childrenList"></div>
+      </div>
+    </fieldset>
+
+    <!-- II. Wealth Section -->
+    <fieldset style="margin-top:12px">
+      <legend>II. Wealth Section</legend>
+
+      <div class="section">
+        <div class="row">
+          <strong>Investments / Assets</strong>
+          <button class="btn ghost" id="btnAddAsset" type="button">+ Add Asset</button>
+        </div>
+        <div class="note">Options: business, stocks, mutual funds, unit trusts, crypto, property, bonds, savings in SGD, savings in PH, annuities, gold, jewelry, other</div>
+        <div id="assetsList" style="margin-top:8px"></div>
+        <div class="hr"></div>
+        <div><span class="kpi">Total Assets: <strong id="totalAssets">0</strong></span>
+             <span class="kpi">For Retirement: <strong id="totalRetirement">0</strong></span>
+             <span class="kpi">For Education: <strong id="totalEducation">0</strong></span></div>
+      </div>
+
+      <div class="section">
+        <strong>Retirement Planning</strong>
+        <div class="grid" style="margin-top:8px">
+          <div class="span-4">
+            <label>Target Retirement Age *</label>
+            <input id="retireAge" type="number" placeholder="65">
+          </div>
+          <div class="span-4">
+            <label>Monthly Income You Want (today's money) *</label>
+            <input class="money" id="retireMonthlyToday" type="text" placeholder="80,000">
+          </div>
+          <div class="span-4">
+            <label>Plan Until Age *</label>
+            <input id="planUntilAge" type="number" placeholder="85">
+          </div>
+          <div class="span-4">
+            <label>Inflation Assumption (%)</label>
+            <input id="inflation" type="number" value="6" step="0.1">
+          </div>
+        </div>
+        <div class="note">Simulation will show gaps vs. current retirement‑purpose assets at returns of 2%, 6%, 8%, 12% p.a.</div>
+      </div>
+
+      <div class="section" id="educationBlock" style="display:none">
+        <strong>Education Planning (auto-filled from Children)</strong>
+        <div class="note">Per child, set target college start age and current annual tuition. We project costs at 12% inflation for 4 years.</div>
+        <div id="eduList" style="margin-top:8px"></div>
+        <div class="hr"></div>
+        <div><span class="kpi">Total Education Requirement: <strong id="eduNeed">0</strong></span>
+             <span class="kpi">Education Assets: <strong id="eduAssets">0</strong></span>
+             <span class="kpi">Education Gap: <strong id="eduGap">0</strong></span></div>
+      </div>
+    </fieldset>
+
+    <!-- III. Protection Section -->
+    <fieldset style="margin-top:12px">
+      <legend>III. Protection Section</legend>
+      <div class="grid">
+        <div class="span-4"><label>Death Benefit (total)</label><input class="money" id="covDeath" type="text" placeholder="0"></div>
+        <div class="span-4"><label>Total Disability (TPD)</label><input class="money" id="covTPD" type="text" placeholder="0"></div>
+        <div class="span-4"><label>Critical Illness</label><input class="money" id="covCI" type="text" placeholder="0"></div>
+        <div class="span-4"><label>Early Illness</label><input class="money" id="covEarly" type="text" placeholder="0"></div>
+        <div class="span-4"><label>Accident Medical Cover</label><input class="money" id="covAccident" type="text" placeholder="0"></div>
+        <div class="span-4"><label>Hospital Cover</label><input class="money" id="covHospital" type="text" placeholder="0"></div>
+      </div>
+      <div class="note">Benchmarks: Death & TPD 5× annual income (Single) or 10× (Married with kids). CI & Early 5× annual income. Accident medical 3,000. Hospital 1,000,000.</div>
+    </fieldset>
+
+    <!-- Report -->
+    <div class="section" id="report" style="margin-top:14px">
+      <strong>Personalized Report</strong>
+      <div id="reportContent" style="margin-top:8px">
+        <div class="note">Click “Generate Report” to compute retirement & education needs, and insurance gaps.</div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="disclaimer">
+        <strong>Disclaimer:</strong> This tool is for <em>educational purposes only</em> and is not financial advice. Figures are estimates and should not be the sole basis for decision-making. Please consult a licensed advisor before taking action. © <span id="year"></span> SmartPera.
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // -------------------- UTILITIES --------------------
+    const $ = (q)=>document.querySelector(q);
+    const $$ = (q)=>document.querySelectorAll(q);
+    const STORAGE_KEY = 'smartpera_fhc_v1';
+    const currencyEl = $('#currency');
+    const saveState = $('#saveState');
+
+    function toNumber(v){ if(v==null) return 0; return parseFloat(String(v).replace(/[^0-9.-]/g,''))||0; }
+    function fmt(n){
+      try{
+        const cur = currencyEl.value || '';
+        return (cur ? (cur + ' ') : '') + (toNumber(n).toLocaleString(undefined,{maximumFractionDigits:2}));
+      }catch(e){ return String(n); }
+    }
+    function formatMoneyInput(el){
+      const val = toNumber(el.value);
+      el.value = val ? val.toLocaleString(undefined,{maximumFractionDigits:2}) : '';
+    }
+    function addMoneyFormatting(selector='input.money'){
+      $$(selector).forEach(el=>{
+        el.addEventListener('blur', ()=>formatMoneyInput(el));
+        el.addEventListener('focus', ()=>{ el.value = String(toNumber(el.value) || ''); });
+        el.addEventListener('input', ()=>{ /* live parsing only */ });
+      });
+    }
+
+    function ageFromDOB(dobStr){
+      if(!dobStr) return null;
+      const dob = new Date(dobStr);
+      if(!dob.getTime()) return null;
+      const now = new Date();
+      let age = now.getFullYear() - dob.getFullYear();
+      const m = now.getMonth() - dob.getMonth();
+      if(m < 0 || (m===0 && now.getDate() < dob.getDate())) age--;
+      return age;
+    }
+
+    function FV(pv, rate, n){ return pv * Math.pow(1 + rate, n); }
+
+    function saveDraft(){
+      const data = collectAll();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      saveState.textContent = 'Saved • ' + new Date().toLocaleTimeString();
+    }
+    function loadDraft(){
+      try{
+        const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if(!data) return;
+        hydrateAll(data);
+        saveState.textContent = 'Draft loaded';
+      }catch(e){}
+    }
+    function clearDraft(){
+      localStorage.removeItem(STORAGE_KEY);
+      saveState.textContent = 'Not saved';
+    }
+
+    // -------------------- DYNAMIC CHILDREN --------------------
+    const statusEl = $('#status');
+    const spouseWrap = $('#spouseWrap');
+    const hasChildrenWrap = $('#hasChildrenWrap');
+    const hasChildrenEl = $('#hasChildren');
+    const childrenSection = $('#childrenSection');
+    const childrenList = $('#childrenList');
+    const eduBlock = $('#educationBlock');
+    const eduList = $('#eduList');
+    const btnAddChild = $('#btnAddChild');
+    let childId = 0;
+
+    function onStatusChange(){
+      const s = statusEl.value;
+      const showFamily = (s !== 'Single');
+      spouseWrap.style.display = showFamily ? '' : 'none';
+      hasChildrenWrap.style.display = showFamily ? '' : 'none';
+      if(!showFamily){ hasChildrenEl.value = 'no'; childrenSection.style.display = 'none'; clearChildren(); }
+    }
+    statusEl.addEventListener('change', onStatusChange);
+
+    function onHasChildrenChange(){
+      const show = hasChildrenEl.value === 'yes';
+      childrenSection.style.display = show ? '' : 'none';
+      eduBlock.style.display = show ? '' : 'none';
+      if(!show){ clearChildren(); }
+    }
+    if(hasChildrenEl) hasChildrenEl.addEventListener('change', onHasChildrenChange);
+
+    function clearChildren(){ childrenList.innerHTML = ''; eduList.innerHTML=''; childId = 0; }
+
+    function addChild(){
+      childId++;
+      const id = 'child_'+childId;
+      const row = document.createElement('div');
+      row.className='section';
+      row.innerHTML = `
+        <div class="grid">
+          <div class="span-4"><label>Child Name</label><input type="text" id="${id}_name" placeholder="Name"></div>
+          <div class="span-4"><label>Age</label><input type="number" id="${id}_age" placeholder="10"></div>
+          <div class="span-4"><label>Target College Start Age</label><input type="number" id="${id}_collegeAge" value="18"></div>
+          <div class="span-6"><label>Current Annual Tuition (today)</label><input class="money" type="text" id="${id}_tuition" placeholder="120,000"></div>
+          <div class="span-6"><label>Notes</label><input type="text" id="${id}_notes" placeholder="Optional"></div>
+        </div>
+        <div class="row"><button class="btn ghost" type="button" data-del="${id}">Remove</button></div>
+      `;
+      childrenList.appendChild(row);
+      // mirror to edu block
+      const edu = document.createElement('div');
+      edu.className='section';
+      edu.dataset.child=id;
+      edu.innerHTML = `<div><strong>Education – <span id="${id}_label">Child ${childId}</span></strong>
+        <div class="note">Projected at 12% inflation for 4 years.</div>
+        <div class="row">
+          <span class="kpi">Years until college: <strong id="${id}_years">0</strong></span>
+          <span class="kpi">Future Annual Cost (Yr 1): <strong id="${id}_fv1">0</strong></span>
+          <span class="kpi">Total 4-yr Cost: <strong id="${id}_fv4">0</strong></span>
+        </div></div>`;
+      eduList.appendChild(edu);
+      addMoneyFormatting(row.querySelectorAll('.money'));
+      row.querySelector('[data-del]').addEventListener('click', ()=>{ row.remove(); edu.remove(); });
+    }
+    if(btnAddChild) btnAddChild.addEventListener('click', addChild);
+
+    // -------------------- ASSETS --------------------
+    const assetsList = $('#assetsList');
+    const btnAddAsset = $('#btnAddAsset');
+    let assetId = 0;
+
+    function addAsset(){
+      assetId++;
+      const id = 'asset_'+assetId;
+      const wrap = document.createElement('div');
+      wrap.className='section';
+      wrap.innerHTML = `
+        <div class="grid">
+          <div class="span-4">
+            <label>Type</label>
+            <select id="${id}_type">
+              <option>business</option><option>stocks</option><option>mutual funds</option><option>unit trusts</option>
+              <option>crypto</option><option>property</option><option>bonds</option><option>savings in SGD</option>
+              <option>savings in PH</option><option>annuities</option><option>gold</option><option>jewelry</option><option>other</option>
+            </select>
+          </div>
+          <div class="span-4"><label>Value</label><input class="money" id="${id}_value" type="text" placeholder="500,000"></div>
+          <div class="span-4">
+            <label>Purpose</label>
+            <select id="${id}_purpose">
+              <option>personal</option><option>retirement</option><option>short term profit</option><option>education</option><option>business purpose</option>
+            </select>
+          </div>
+          <div class="span-4 prop-only" style="display:none">
+            <label>Fully Paid?</label>
+            <select id="${id}_paid"><option value="yes">Yes</option><option value="no">No</option></select>
+          </div>
+          <div class="span-4 prop-only" style="display:none">
+            <label>Outstanding Loan Balance</label><input class="money" id="${id}_loan" type="text" placeholder="0">
+          </div>
+          <div class="span-4 prop-only" style="display:none">
+            <label>Equity (auto)</label><input id="${id}_equity" type="text" disabled>
+          </div>
+        </div>
+        <div class="row"><button class="btn ghost" type="button" data-del="${id}">Remove</button></div>
+      `;
+      assetsList.appendChild(wrap);
+      addMoneyFormatting(wrap.querySelectorAll('.money'));
+      const typeEl = wrap.querySelector('#'+id+'_type');
+      const paidEl = wrap.querySelector('#'+id+'_paid');
+      const valueEl = wrap.querySelector('#'+id+'_value');
+      const loanEl = wrap.querySelector('#'+id+'_loan');
+      const eqEl = wrap.querySelector('#'+id+'_equity');
+
+      function updatePropVisibility(){
+        const isProp = typeEl.value === 'property';
+        wrap.querySelectorAll('.prop-only').forEach(n=> n.style.display = isProp ? '' : 'none');
+        computeEquity();
+      }
+      function computeEquity(){
+        const isProp = typeEl.value === 'property';
+        if(!isProp){ eqEl.value = ''; return; }
+        const v = toNumber(valueEl.value);
+        const loan = (paidEl.value==='no') ? toNumber(loanEl.value) : 0;
+        const eq = Math.max(0, v - loan);
+        eqEl.value = (eq || 0).toLocaleString();
+      }
+      typeEl.addEventListener('change', updatePropVisibility);
+      paidEl.addEventListener('change', computeEquity);
+      valueEl.addEventListener('input', computeEquity);
+      loanEl.addEventListener('input', computeEquity);
+      wrap.querySelector('[data-del]').addEventListener('click', ()=> wrap.remove());
+      updatePropVisibility();
+    }
+    if(btnAddAsset) btnAddAsset.addEventListener('click', addAsset);
+
+    // -------------------- COLLECT / HYDRATE --------------------
+    function collectChildren(){
+      const out = [];
+      childrenList.querySelectorAll('.section').forEach(sec=>{
+        const inputs = sec.querySelectorAll('input');
+        const obj = {};
+        inputs.forEach(i=>{
+          obj[i.id.split('_').slice(-1)[0]] = i.value;
+        });
+        // rebuild clearer keys
+        out.push({
+          name: sec.querySelector('input[id$=\"_name\"]').value,
+          age: toNumber(sec.querySelector('input[id$=\"_age\"]').value),
+          collegeAge: toNumber(sec.querySelector('input[id$=\"_collegeAge\"]').value),
+          tuition: toNumber(sec.querySelector('input[id$=\"_tuition\"]').value),
+          notes: sec.querySelector('input[id$=\"_notes\"]').value
+        });
+      });
+      return out;
+    }
+    function hydrateChildren(arr){
+      clearChildren();
+      (arr||[]).forEach(c=>{
+        addChild();
+        const id = 'child_'+childId;
+        $('#'+id+'_name').value = c.name||'';
+        $('#'+id+'_age').value = c.age||'';
+        $('#'+id+'_collegeAge').value = c.collegeAge||'';
+        $('#'+id+'_tuition').value = c.tuition ? Number(c.tuition).toLocaleString() : '';
+        $('#'+id+'_notes').value = c.notes||'';
+      });
+    }
+
+    function collectAssets(){
+      const out = [];
+      assetsList.querySelectorAll('.section').forEach(sec=>{
+        const idType = sec.querySelector('select[id$=\"_type\"]').id;
+        const idVal  = sec.querySelector('input[id$=\"_value\"]').id;
+        const idPur  = sec.querySelector('select[id$=\"_purpose\"]').id;
+        const type = $('#'+idType).value;
+        const value = toNumber($('#'+idVal).value);
+        const purpose = $('#'+idPur).value;
+        let equity = value;
+        if(type==='property'){
+          const paid = $('#'+idType.replace('_type','_paid')).value;
+          const loan = toNumber($('#'+idType.replace('_type','_loan')).value);
+          equity = (paid==='no') ? Math.max(0, value - loan) : value;
+        }
+        out.push({type, value, purpose, equity});
+      });
+      return out;
+    }
+    function hydrateAssets(arr){
+      assetsList.innerHTML=''; assetId=0;
+      (arr||[]).forEach(a=>{
+        addAsset();
+        const id = 'asset_'+assetId;
+        $('#'+id+'_type').value = a.type||'other';
+        $('#'+id+'_value').value = a.value ? Number(a.value).toLocaleString() : '';
+        $('#'+id+'_purpose').value = a.purpose||'personal';
+        // set property specifics only if type is property
+        if(a.type==='property'){
+          $('#'+id+'_paid').value = (a.loan && a.loan>0) ? 'no' : 'yes';
+          $('#'+id+'_loan').value = a.loan ? Number(a.loan).toLocaleString() : '';
+        }
+      });
+    }
+
+    function collectAll(){
+      return {
+        currency: $('#currency').value,
+        fullName: $('#fullName').value,
+        dob: $('#dob').value,
+        status: $('#status').value,
+        spouseWorking: $('#spouseWorking').value || '',
+        hasChildren: $('#hasChildren').value || 'no',
+        smoker: $('#smoker').value,
+        occupation: $('#occupation').value,
+        medical: $('#medical').value,
+        incomeActive: toNumber($('#incomeActive').value),
+        incomeOther: toNumber($('#incomeOther').value),
+        incomeOtherType: $('#incomeOtherType').value,
+        expenses: toNumber($('#expenses').value),
+        children: collectChildren(),
+        assets: collectAssets(),
+        retireAge: toNumber($('#retireAge').value),
+        retireMonthlyToday: toNumber($('#retireMonthlyToday').value),
+        planUntilAge: toNumber($('#planUntilAge').value),
+        inflation: toNumber($('#inflation').value)
+      };
+    }
+    function hydrateAll(d){
+      if(!d) return;
+      $('#currency').value = d.currency || 'SGD';
+      $('#fullName').value = d.fullName||'';
+      $('#dob').value = d.dob||'';
+      $('#status').value = d.status||'Single';
+      onStatusChange();
+      $('#spouseWorking').value = d.spouseWorking||'yes';
+      if(d.status!=='Single'){ $('#hasChildren').value = d.hasChildren||'no'; onHasChildrenChange(); }
+      $('#smoker').value = d.smoker||'No';
+      $('#occupation').value = d.occupation||'';
+      $('#medical').value = d.medical||'';
+      $('#incomeActive').value = d.incomeActive ? Number(d.incomeActive).toLocaleString() : '';
+      $('#incomeOther').value = d.incomeOther ? Number(d.incomeOther).toLocaleString() : '';
+      $('#incomeOtherType').value = d.incomeOtherType||'';
+      $('#expenses').value = d.expenses ? Number(d.expenses).toLocaleString() : '';
+      hydrateChildren(d.children||[]);
+      hydrateAssets(d.assets||[]);
+      $('#retireAge').value = d.retireAge||'';
+      $('#retireMonthlyToday').value = d.retireMonthlyToday ? Number(d.retireMonthlyToday).toLocaleString() : '';
+      $('#planUntilAge').value = d.planUntilAge||'';
+      $('#inflation').value = d.inflation||6;
+    }
+
+    // -------------------- COMPUTATIONS --------------------
+    const totalAssetsEl = $('#totalAssets');
+    const totalRetEl = $('#totalRetirement');
+    const totalEduEl = $('#totalEducation');
+    const eduNeedEl = $('#eduNeed');
+    const eduAssetsEl = $('#eduAssets');
+    const eduGapEl = $('#eduGap');
+    const reportContent = $('#reportContent');
+
+    function recomputeAssetTotals(){
+      const assets = collectAssets();
+      let total = 0, ret=0, edu=0;
+      assets.forEach(a=>{
+        total += a.equity;
+        if(a.purpose==='retirement') ret += a.equity;
+        if(a.purpose==='education') edu += a.equity;
+      });
+      totalAssetsEl.textContent = fmt(total);
+      totalRetEl.textContent = fmt(ret);
+      totalEduEl.textContent = fmt(edu);
+      return {total, ret, edu};
+    }
+    assetsList.addEventListener('input', recomputeAssetTotals);
+    assetsList.addEventListener('change', recomputeAssetTotals);
+
+    function computeEducation(children, eduAssets){
+      let totalNeed = 0;
+      const infl = 0.12;
+      children.forEach((c, idx)=>{
+        const years = Math.max(0, (c.collegeAge||18) - (c.age||0));
+        const fv1 = FV((c.tuition||0), infl, years);
+        const fv4 = fv1 * 4;
+        totalNeed += fv4;
+        // show in UI (if exists)
+        const id = 'child_'+(idx+1);
+        const lab = document.getElementById(id+'_label');
+        const y1 = document.getElementById(id+'_years');
+        const f1 = document.getElementById(id+'_fv1');
+        const f4 = document.getElementById(id+'_fv4');
+        if(lab){ lab.textContent = (c.name||('Child '+(idx+1))); }
+        if(y1){ y1.textContent = years; }
+        if(f1){ f1.textContent = fmt(fv1); }
+        if(f4){ f4.textContent = fmt(fv4); }
+      });
+      const gap = Math.max(0, totalNeed - eduAssets);
+      eduNeedEl.textContent = fmt(totalNeed);
+      eduAssetsEl.textContent = fmt(eduAssets);
+      eduGapEl.textContent = fmt(gap);
+      return {totalNeed, gap};
+    }
+
+    function computeRetirement(age, retireAge, monthlyToday, inflPct, untilAge, retirementAssets){
+      const yearsToRetire = Math.max(0, retireAge - age);
+      const monthlyAtRet = FV(monthlyToday, inflPct/100, yearsToRetire);
+      const yearsInRet = Math.max(0, untilAge - retireAge);
+      const totalNeed = monthlyAtRet * 12 * yearsInRet;
+
+      const scenarios = [0.02, 0.06, 0.08, 0.12].map(r=>{
+        const futureAssets = FV(retirementAssets, r, yearsToRetire);
+        const gap = totalNeed - futureAssets;
+        return {r, futureAssets, gap, ok: futureAssets >= totalNeed};
+      });
+      return {yearsToRetire, monthlyAtRet, yearsInRet, totalNeed, scenarios};
+    }
+
+    function computeInsuranceGaps(status, hasChildren, annualIncome, cov){
+      const hasKids = (status!=='Single') and (hasChildren==='yes');
+      const mult = hasKids ? 10 : 5;
+      const req = {
+        death: annualIncome*mult,
+        tpd: annualIncome*mult,
+        ci: annualIncome*5,
+        early: annualIncome*5,
+        accident: 3000,
+        hospital: 1000000
+      };
+      const gap = {
+        death: Math.max(0, req.death - cov.death),
+        tpd: Math.max(0, req.tpd - cov.tpd),
+        ci: Math.max(0, req.ci - cov.ci),
+        early: Math.max(0, req.early - cov.early),
+        accident: Math.max(0, req.accident - cov.accident),
+        hospital: Math.max(0, req.hospital - cov.hospital),
+      };
+      return {req, gap};
+    }
+
+    function generateReport(){
+      const d = collectAll();
+      const age = ageFromDOB(d.dob) || 0;
+      const annualIncome = (d.incomeActive + d.incomeOther)*12;
+
+      // Assets
+      const {total, ret, edu} = recomputeAssetTotals();
+
+      // Education (only if kids)
+      const eduRes = computeEducation(d.children || [], edu);
+
+      // Retirement
+      const retRes = computeRetirement(age, d.retireAge, d.retireMonthlyToday, d.inflation, d.planUntilAge, ret);
+
+      // Insurance
+      const cov = {
+        death: toNumber($('#covDeath').value),
+        tpd: toNumber($('#covTPD').value),
+        ci: toNumber($('#covCI').value),
+        early: toNumber($('#covEarly').value),
+        accident: toNumber($('#covAccident').value),
+        hospital: toNumber($('#covHospital').value)
+      };
+      const ins = computeInsuranceGaps(d.status, d.hasChildren, annualIncome, cov);
+
+      // Build HTML report
+      const cur = currencyEl.value;
+      const retRows = retRes.scenarios.map(s=>`
+        <tr><td>${(s.r*100).toFixed(0)}%</td><td>${fmt(s.futureAssets)}</td><td>${fmt(retRes.totalNeed)}</td><td class="${s.ok?'ok':'err'}">${s.ok?'Adequate':'Shortfall'} ${s.ok?'':'(' + fmt(Math.max(0, s.gap)) + ')'}</td></tr>
+      `).join('');
+
+      const insRows = `
+        <tr><th>Benefit</th><th>Have</th><th>Need</th><th>Gap</th></tr>
+        <tr><td>Death</td><td>${fmt(cov.death)}</td><td>${fmt(ins.req.death)}</td><td class="${ins.gap.death>0?'err':'ok'}">${fmt(ins.gap.death)}</td></tr>
+        <tr><td>Total Disability</td><td>${fmt(cov.tpd)}</td><td>${fmt(ins.req.tpd)}</td><td class="${ins.gap.tpd>0?'err':'ok'}">${fmt(ins.gap.tpd)}</td></tr>
+        <tr><td>Critical Illness</td><td>${fmt(cov.ci)}</td><td>${fmt(ins.req.ci)}</td><td class="${ins.gap.ci>0?'err':'ok'}">${fmt(ins.gap.ci)}</td></tr>
+        <tr><td>Early Illness</td><td>${fmt(cov.early)}</td><td>${fmt(ins.req.early)}</td><td class="${ins.gap.early>0?'err':'ok'}">${fmt(ins.gap.early)}</td></tr>
+        <tr><td>Accident Medical</td><td>${fmt(cov.accident)}</td><td>${fmt(ins.req.accident)}</td><td class="${ins.gap.accident>0?'err':'ok'}">${fmt(ins.gap.accident)}</td></tr>
+        <tr><td>Hospital</td><td>${fmt(cov.hospital)}</td><td>${fmt(ins.req.hospital)}</td><td class="${ins.gap.hospital>0?'err':'ok'}">${fmt(ins.gap.hospital)}</td></tr>
+      `;
+
+      const empathy = `
+      <p><strong>Reality Check (Taglish):</strong> Madalas na‑uuna ang gastos kaysa sa plano. Kapag na‑delay ang retirement planning, nababawasan ang <em>power of choice</em>. Kung may pamilya, posibleng maging sandwich generation ang mga anak. Kung single, sarili lang ang aasahan. Walang plano = walang kapangyarihan pumili. At sa totoo lang, kailangan ng pera para sa tirahan, pagkain, gamot—lahat.</p>
+      <p><strong>Protection Mindset:</strong> Huwag umasa sa company insurance. Kapag tumigil ang trabaho, titigil din ang coverage. Kung may major illness, maaaring hindi na ma‑approve for new coverage. Doon pumapasok ang forced liquidation—ibebenta ang investments nang palugi. Tandaan, pagkatapos ng gamutan, kailangan pa rin ang retirement. Planuhin habang mas mura at mas malakas pa tayo.</p>
+      `;
+
+      reportContent.innerHTML = `
+        <div class="section" style="background:white">
+          <div class="row"><strong>Client Snapshot:</strong> <span class="kpi">Name: <strong>${d.fullName || '-'}</strong></span> <span class="kpi">Age: <strong>${age}</strong></span> <span class="kpi">Status: <strong>${d.status}</strong></span> <span class="kpi">Currency: <strong>${cur}</strong></span></div>
+          <div class="row"><span class="kpi">Monthly Income: <strong>${fmt(d.incomeActive + d.incomeOther)}</strong></span> <span class="kpi">Monthly Expenses: <strong>${fmt(d.expenses)}</strong></span></div>
+          <div class="row"><span class="kpi">Total Assets (Equity): <strong>${fmt(total)}</strong></span> <span class="kpi">Retirement‑purpose Assets: <strong>${fmt(ret)}</strong></span> <span class="kpi">Education‑purpose Assets: <strong>${fmt(edu)}</strong></span></div>
+        </div>
+
+        <div class="section">
+          <h3>Retirement Simulation</h3>
+          <div class="row">
+            <span class="kpi">Years to Retire: <strong>${retRes.yearsToRetire}</strong></span>
+            <span class="kpi">Monthly @ Retirement: <strong>${fmt(retRes.monthlyAtRet)}</strong></span>
+            <span class="kpi">Years in Retirement: <strong>${retRes.yearsInRet}</strong></span>
+            <span class="kpi">Total Retirement Requirement: <strong>${fmt(retRes.totalNeed)}</strong></span>
+          </div>
+          <div class="hr"></div>
+          <table>
+            <tr><th>Return</th><th>Projected Retirement Assets</th><th>Requirement</th><th>Status</th></tr>
+            ${retRows}
+          </table>
+        </div>
+
+        ${d.children && d.children.length ? `
+        <div class="section">
+          <h3>Education Projection (12% inflation, 4 years)</h3>
+          <div class="row">
+            <span class="kpi">Total Projected Education Cost: <strong>${fmt(eduRes.totalNeed)}</strong></span>
+            <span class="kpi">Education Assets: <strong>${fmt(edu)}</strong></span>
+            <span class="kpi ${eduRes.gap>0?'err':'ok'}">Education Gap: <strong>${fmt(eduRes.gap)}</strong></span>
+          </div>
+        </div>` : ''}
+
+        <div class="section">
+          <h3>Protection Adequacy</h3>
+          <table>${insRows}</table>
+          <div class="note" style="margin-top:8px">
+            ${ins.gap.death>0||ins.gap.tpd>0||ins.gap.ci>0||ins.gap.early>0||ins.gap.accident>0||ins.gap.hospital>0
+              ? '<strong class="err">There are protection gaps.</strong> Let’s align coverage to protect cashflow and assets while building wealth.'
+              : '<strong class="ok">Your coverage looks adequate vs. benchmarks.</strong> Let’s review structure and affordability to optimize.'}
+          </div>
+        </div>
+
+        <div class="section">${empathy}</div>
+      `;
+    }
+
+    // -------------------- EVENTS --------------------
+    addMoneyFormatting();
+    ['fullName','dob','status','spouseWorking','hasChildren','smoker','occupation','medical','incomeActive','incomeOther','incomeOtherType','expenses','retireAge','retireMonthlyToday','planUntilAge','inflation']
+      .forEach(id => { const el = $('#'+id); if(el) el.addEventListener('input', saveDraft); });
+    currencyEl.addEventListener('change', saveDraft);
+
+    $('#btnReport').addEventListener('click', ()=>{ generateReport(); saveDraft(); window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'}); });
+    $('#btnExport').addEventListener('click', ()=>{ window.print(); });
+    $('#btnSave').addEventListener('click', saveDraft);
+    $('#btnClear').addEventListener('click', ()=>{ if(confirm('Clear all inputs and draft?')){ localStorage.removeItem(STORAGE_KEY); location.reload(); } });
+
+    // save autos on assets & children changes
+    assetsList.addEventListener('input', saveDraft);
+    childrenList.addEventListener('input', saveDraft);
+
+    // initial UI state
+    onStatusChange();
+    loadDraft();
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // recompute totals on load
+    recomputeAssetTotals();
+
+    // show children controls based on status
+    onHasChildrenChange();
+
+    // -------------------- PWA: register service worker --------------------
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      });
+    }
+  </script>
+</body>
+</html>
